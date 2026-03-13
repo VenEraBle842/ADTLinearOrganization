@@ -128,7 +128,7 @@ public:
     Sequence<T>* CreateEmpty() const override { return new ImmutableArraySequence<T>(); }
 };
 
-// GetSubsequence определяем здесь,
+// GetSubsequence определяем здесь, когда оба подкласса уже известны
 template <class T>
 Sequence<T>* ArraySequence<T>::GetSubsequence(int startIndex, int endIndex) const {
     if (startIndex < 0 || endIndex >= GetLength() || startIndex > endIndex)

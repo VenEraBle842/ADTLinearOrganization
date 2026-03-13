@@ -95,7 +95,7 @@ public:
     Sequence<T>* CreateEmpty() const override { return new ImmutableListSequence<T>(); }
 };
 
-// GetSubsequence — определяем здесь, когда MutableListSequence уже известен
+// GetSubsequence определяем здесь, когда оба подкласса уже известны
 template <class T>
 Sequence<T>* ListSequence<T>::GetSubsequence(int startIndex, int endIndex) const {
     if (startIndex < 0 || endIndex >= GetLength() || startIndex > endIndex)
