@@ -94,11 +94,22 @@ std::ostream& operator<<(std::ostream& os, const Sequence<T>& seq) {
     return os << "]";
 }
 
+// Вспомогательная функция для добавления эл-та с отслеживанием указателя
+// Нужна для корректной работы с Immutable-последовательностями в цикле:
+// каждый Append у Immutable создает новый объект. Старый при этом нужно удалить.
+template <class T>
+void appendTracked(Sequence<T>*& seq, T item) {
+    Sequence<T>* next = seq->Append(item);
+    if (next != seq) { delete seq; seq = next; }
+}
+
 // Разрыв цикла: включаем ArraySequence ПОСЛЕ определения Sequence
 #include "ArraySequence.h"
 
-// Реализации методов map-reduce
+// Реализации методов
 
+// Map и MapIndexed: T2 может отличаться от T, поэтому CreateEmpty()
+// (которая возвращает Sequence<T>*) здесь неприменима. Всегда создаем MutableArraySequence<T2>.
 template <class T>
 template <class T2>
 Sequence<T2>* Sequence<T>::Map(T2 (*f)(T)) const {
@@ -115,20 +126,24 @@ Sequence<T2>* Sequence<T>::MapIndexed(T2 (*f)(T, int)) const {
     return result;
 }
 
+// Where, FlatMap, Slice, Split: тип T не меняется. Используем CreateEmpty(),
+// чтобы результат сохранял конкретный тип исходной последовательности.
+
 template <class T>
 Sequence<T>* Sequence<T>::Where(bool (*predicate)(T)) const {
-    auto* result = new MutableArraySequence<T>();
+    Sequence<T>* result = CreateEmpty();
     for (int i = 0; i < GetLength(); ++i)
-        if (predicate(Get(i))) result->Append(Get(i));
+        if (predicate(Get(i))) appendTracked(result, Get(i));
     return result;
 }
 
 template <class T>
 Sequence<T>* Sequence<T>::FlatMap(Sequence<T>* (*f)(T)) const {
-    auto* result = new MutableArraySequence<T>();
+    Sequence<T>* result = CreateEmpty();
     for (int i = 0; i < GetLength(); ++i) {
         Sequence<T>* sub = f(Get(i));
-        for (int j = 0; j < sub->GetLength(); ++j) result->Append(sub->Get(j));
+        for (int j = 0; j < sub->GetLength(); ++j)
+            appendTracked(result, sub->Get(j));
         delete sub;
     }
     return result;
@@ -142,26 +157,28 @@ Sequence<T>* Sequence<T>::Slice(int i, int n, Sequence<T>* s) const {
         throw IndexOutOfRange("Slice: index " + std::to_string(i) +
                               " out of range for length " + std::to_string(len));
     if (n < 0) throw IndexOutOfRange("Slice: count cannot be negative");
-    auto* result = new MutableArraySequence<T>();
-    for (int k = 0; k < actual; ++k)                result->Append(Get(k));
-    if (s) for (int k = 0; k < s->GetLength(); ++k) result->Append(s->Get(k));
-    for (int k = actual + n; k < len; ++k)          result->Append(Get(k));
+    Sequence<T>* result = CreateEmpty();
+    for (int k = 0; k < actual; ++k)                appendTracked(result, Get(k));
+    if (s) for (int k = 0; k < s->GetLength(); ++k) appendTracked(result, s->Get(k));
+    for (int k = actual + n; k < len; ++k)          appendTracked(result, Get(k));
+    // [0 .. actual-1] + содержимое s + [actual+n .. len-1]
     return result;
 }
 
 template <class T>
 Sequence<Sequence<T>*>* Sequence<T>::Split(bool (*isSeparator)(T)) const {
+    // внешний контейнер (result) всегда Mutable (тип элементов Sequence<T>* отличается от T)
     auto* result  = new MutableArraySequence<Sequence<T>*>();
-    auto* current = new MutableArraySequence<T>();
+    Sequence<T>* current = CreateEmpty();  // внутренние куски того же типа, что this
     for (int i = 0; i < GetLength(); ++i) {
         if (isSeparator(Get(i))) {
             result->Append(static_cast<Sequence<T>*>(current));
-            current = new MutableArraySequence<T>();
+            current = CreateEmpty();
         } else {
-            current->Append(Get(i));
+            appendTracked(current, Get(i));
         }
     }
-    result->Append(static_cast<Sequence<T>*>(current));
+    result->Append(static_cast<Sequence<T>*>(current));  // последний кусок
     return static_cast<Sequence<Sequence<T>*>*>(result);
 }
 

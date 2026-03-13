@@ -102,18 +102,6 @@ public:
     const T* end()   const { return array_->end();   }
 };
 
-// GetSubsequence определяем после полного описания класса
-template <class T>
-Sequence<T>* ArraySequence<T>::GetSubsequence(int startIndex, int endIndex) const {
-    if (startIndex < 0 || endIndex >= GetLength() || startIndex > endIndex)
-        throw IndexOutOfRange("ArraySequence::GetSubsequence: invalid range [" +
-            std::to_string(startIndex) + ", " + std::to_string(endIndex) + "]");
-    // результат — всегда Mutable, объявлен ниже
-    auto* result = new MutableArraySequence<T>();
-    for (int i = startIndex; i <= endIndex; ++i) result->AppendInPlace(Get(i));
-    return result;
-}
-
 // MutableArraySequence
 template <class T>
 class MutableArraySequence : public ArraySequence<T> {
@@ -139,3 +127,16 @@ public:
     Sequence<T>* Instance()          override { return this->Clone(); }
     Sequence<T>* CreateEmpty() const override { return new ImmutableArraySequence<T>(); }
 };
+
+// GetSubsequence определяем здесь,
+template <class T>
+Sequence<T>* ArraySequence<T>::GetSubsequence(int startIndex, int endIndex) const {
+    if (startIndex < 0 || endIndex >= GetLength() || startIndex > endIndex)
+        throw IndexOutOfRange("ArraySequence::GetSubsequence: invalid range [" +
+            std::to_string(startIndex) + ", " + std::to_string(endIndex) + "]");
+    // CreateEmpty() вернет Mutable или Immutable в зависимости от типа this
+    Sequence<T>* result = this->CreateEmpty();
+    for (int i = startIndex; i <= endIndex; ++i)
+        appendTracked(result, Get(i));
+    return result;
+}

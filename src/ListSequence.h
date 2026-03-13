@@ -101,7 +101,8 @@ Sequence<T>* ListSequence<T>::GetSubsequence(int startIndex, int endIndex) const
     if (startIndex < 0 || endIndex >= GetLength() || startIndex > endIndex)
         throw IndexOutOfRange("ListSequence::GetSubsequence: invalid range [" +
             std::to_string(startIndex) + ", " + std::to_string(endIndex) + "]");
-    auto* result = new MutableListSequence<T>();
-    for (int i = startIndex; i <= endIndex; ++i) result->AppendInPlace(Get(i));
+    Sequence<T>* result = this->CreateEmpty();
+    for (int i = startIndex; i <= endIndex; ++i)
+        appendTracked(result, Get(i));
     return result;
 }

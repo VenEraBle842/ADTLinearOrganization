@@ -13,7 +13,6 @@ struct Bit {
 
 // BitSequence — последовательность битов с логическими операциями
 class BitSequence : public MutableArraySequence<Bit> {
-    // Возвращает наименьшую из двух длин
     static int minLen(int a, int b) { return a < b ? a : b; }
 
 public:
@@ -64,7 +63,6 @@ public:
     // применение маски
     BitSequence* ApplyMask(const BitSequence* mask) const { return AND(mask); }
 
-    // вывод в строку
     std::string ToString() const {
         std::string s;
         for (int i = 0; i < GetLength(); ++i) s += static_cast<char>('0' + Get(i).value);
