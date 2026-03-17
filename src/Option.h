@@ -8,11 +8,11 @@ class Option {
     T    value_;
 
     Option() : hasValue_(false), value_{} {}
-    explicit Option(T v) : hasValue_(true), value_(std::move(v)) {}
+    explicit Option(const T& v) : hasValue_(true), value_(v) {}
 
 public:
-    static Option Some(T v) { return Option(std::move(v)); }
-    static Option None()    { return Option(); }
+    static Option Some(const T& v) { return Option(v); }
+    static Option None()           { return Option(); }
 
     bool HasValue()  const { return hasValue_; }
     T    GetValue()  const {

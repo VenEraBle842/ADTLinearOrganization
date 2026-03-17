@@ -81,3 +81,52 @@ TEST(LinkedList, Enumerator) {
     EXPECT_FALSE(en->MoveNext());
     delete en;
 }
+
+TEST(LinkedList, RemoveFirst) {
+    int arr[] = {1, 2, 3};
+    LinkedList<int> ll(arr, 3);
+    ll.RemoveFirst();
+    EXPECT_EQ(ll.GetFirst(),  2);
+    EXPECT_EQ(ll.GetLength(), 2);
+}
+
+TEST(LinkedList, RemoveLast) {
+    int arr[] = {1, 2, 3};
+    LinkedList<int> ll(arr, 3);
+    ll.RemoveLast();
+    EXPECT_EQ(ll.GetLast(),   2);
+    EXPECT_EQ(ll.GetLength(), 2);
+}
+
+TEST(LinkedList, RemoveAt) {
+    int arr[] = {1, 2, 3};
+    LinkedList<int> ll(arr, 3);
+    ll.RemoveAt(1);
+    EXPECT_EQ(ll.Get(1),      3);
+    EXPECT_EQ(ll.GetLength(), 2);
+}
+
+TEST(LinkedList, RemoveSingleElement) {
+    int arr[] = {42};
+    LinkedList<int> ll(arr, 1);
+    ll.RemoveFirst();
+    EXPECT_EQ(ll.GetLength(), 0);
+    EXPECT_THROW(ll.GetFirst(), IndexOutOfRange);
+}
+
+TEST(LinkedList, RemoveFirstEmpty) {
+    LinkedList<int> ll;
+    EXPECT_THROW(ll.RemoveFirst(), IndexOutOfRange);
+}
+
+TEST(LinkedList, RemoveLastEmpty) {
+    LinkedList<int> ll;
+    EXPECT_THROW(ll.RemoveLast(), IndexOutOfRange);
+}
+
+TEST(LinkedList, RemoveAtOutOfRange) {
+    int arr[] = {1, 2};
+    LinkedList<int> ll(arr, 2);
+    EXPECT_THROW(ll.RemoveAt(-1), IndexOutOfRange);
+    EXPECT_THROW(ll.RemoveAt(2),  IndexOutOfRange);
+}

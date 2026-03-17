@@ -12,7 +12,7 @@ public:
     ListSequence()
         : list_(new LinkedList<T>()) {}
 
-    ListSequence(T* items, int count)
+    ListSequence(const T* items, int count)
         : list_(new LinkedList<T>(items, count)) {}
 
     ListSequence(const ListSequence<T>& other)
@@ -21,39 +21,54 @@ public:
     ~ListSequence() override { delete list_; }
 
     // чтение
-    T   GetFirst() const override { return list_->GetFirst(); }
-    T   GetLast()  const override { return list_->GetLast();  }
-    T   Get(int index) const override { return list_->Get(index); }
+    const T&   GetFirst()     const override { return list_->GetFirst(); }
+    const T&   GetLast()      const override { return list_->GetLast();  }
+    const T&   Get(int index) const override { return list_->Get(index); }
     int GetLength()    const override { return list_->GetLength(); }
 
     // Объявление без определения — MutableListSequence ещё не известен
     Sequence<T>* GetSubsequence(int startIndex, int endIndex) const override;
 
     // внутренние мутации
-    void AppendInPlace(T item)              { list_->Append(std::move(item));          }
-    void PrependInPlace(T item)             { list_->Prepend(std::move(item));         }
-    void InsertAtInPlace(T item, int index) { list_->InsertAt(std::move(item), index); }
+    void AppendInPlace(const T& item)              { list_->Append(item);          }
+    void PrependInPlace(const T& item)             { list_->Prepend(item);         }
+    void InsertAtInPlace(const T& item, int index) { list_->InsertAt(item, index); }
+    void RemoveFirstInPlace()                      { list_->RemoveFirst();         }
+    void RemoveLastInPlace()                       { list_->RemoveLast();          }
+    void RemoveAtInPlace(int index)                { list_->RemoveAt(index);       }
 
     // мутация через Instance()
-    Sequence<T>* Append(T item) override {
+    Sequence<T>* Append(const T& item) override {
         auto* inst = static_cast<ListSequence<T>*>(this->Instance());
         inst->AppendInPlace(item);
         return inst;
     }
-    Sequence<T>* Prepend(T item) override {
+    Sequence<T>* Prepend(const T& item) override {
         auto* inst = static_cast<ListSequence<T>*>(this->Instance());
         inst->PrependInPlace(item);
         return inst;
     }
-    Sequence<T>* InsertAt(T item, int index) override {
+    Sequence<T>* InsertAt(const T& item, int index) override {
         auto* inst = static_cast<ListSequence<T>*>(this->Instance());
         inst->InsertAtInPlace(item, index);
         return inst;
     }
-    Sequence<T>* Concat(Sequence<T>* other) override {
+
+    Sequence<T>* RemoveFirst() override {
         auto* inst = static_cast<ListSequence<T>*>(this->Instance());
-        for (int i = 0; i < other->GetLength(); ++i)
-            inst->AppendInPlace(other->Get(i));
+        inst->RemoveFirstInPlace();
+        return inst;
+    }
+
+    Sequence<T>* RemoveLast() override {
+        auto* inst = static_cast<ListSequence<T>*>(this->Instance());
+        inst->RemoveLastInPlace();
+        return inst;
+    }
+
+    Sequence<T>* RemoveAt(int index) override {
+        auto* inst = static_cast<ListSequence<T>*>(this->Instance());
+        inst->RemoveAtInPlace(index);
         return inst;
     }
 
@@ -74,7 +89,7 @@ template <class T>
 class MutableListSequence : public ListSequence<T> {
 public:
     MutableListSequence() : ListSequence<T>() {}
-    MutableListSequence(T* items, int count) : ListSequence<T>(items, count) {}
+    MutableListSequence(const T* items, int count) : ListSequence<T>(items, count) {}
     MutableListSequence(const MutableListSequence<T>& other) : ListSequence<T>(other) {}
 
     Sequence<T>* Clone()       const override { return new MutableListSequence<T>(*this); }
@@ -87,7 +102,7 @@ template <class T>
 class ImmutableListSequence : public ListSequence<T> {
 public:
     ImmutableListSequence() : ListSequence<T>() {}
-    ImmutableListSequence(T* items, int count) : ListSequence<T>(items, count) {}
+    ImmutableListSequence(const T* items, int count) : ListSequence<T>(items, count) {}
     ImmutableListSequence(const ImmutableListSequence<T>& other) : ListSequence<T>(other) {}
 
     Sequence<T>* Clone()       const override { return new ImmutableListSequence<T>(*this); }

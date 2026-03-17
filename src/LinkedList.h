@@ -8,7 +8,7 @@ class LinkedList : public IEnumerable<T> {
     struct Node {
         T     data;
         Node* next;
-        explicit Node(T d) : data(std::move(d)), next(nullptr) {}
+        explicit Node(const T& d) : data(d), next(nullptr) {}
     };
 
     Node* head_;
@@ -24,7 +24,7 @@ class LinkedList : public IEnumerable<T> {
 
 public:
     // конструкторы
-    LinkedList(T* items, int count) : head_(nullptr), tail_(nullptr), length_(0) {
+    LinkedList(const T* items, int count) : head_(nullptr), tail_(nullptr), length_(0) {
         for (int i = 0; i < count; ++i) Append(items[i]);
     }
 
@@ -44,17 +44,17 @@ public:
     ~LinkedList() { Clear(); }
 
     // методы доступа
-    T GetFirst() const {
+    const T& GetFirst() const {
         if (!head_) throw IndexOutOfRange("LinkedList::GetFirst: list is empty");
         return head_->data;
     }
 
-    T GetLast() const {
+    const T& GetLast() const {
         if (!tail_) throw IndexOutOfRange("LinkedList::GetLast: list is empty");
         return tail_->data;
     }
 
-    T Get(int index) const {
+    const T& Get(int index) const {
         if (index < 0 || index >= length_)
             throw IndexOutOfRange(index, length_ - 1);
         Node* cur = head_;
@@ -85,35 +85,73 @@ public:
     int GetLength() const { return length_; }
 
     // модифицирующие методы
-    void Append(T item) {
-        Node* node = new Node(std::move(item));
+    void Append(const T& item) {
+        Node* node = new Node(item);
         if (!tail_) { head_ = tail_ = node; }
         else { tail_->next = node; tail_ = node; }
         ++length_;
     }
 
-    void Prepend(T item) {
-        Node* node = new Node(std::move(item));
+    void Prepend(const T& item) {
+        Node* node = new Node(item);
         node->next = head_;
         head_ = node;
         if (!tail_) tail_ = head_;
         ++length_;
     }
 
-    void InsertAt(T item, int index) {
+    void InsertAt(const T& item, int index) {
         if (index < 0 || index > length_)
             throw IndexOutOfRange(index, length_);
-        if (index == 0)        { Prepend(std::move(item)); return; }
-        if (index == length_)  { Append(std::move(item));  return; }
+        if (index == 0)        { Prepend(item); return; }
+        if (index == length_)  { Append(item);  return; }
         Node* prev = head_;
         for (int i = 0; i < index - 1; ++i) prev = prev->next;
-        Node* node = new Node(std::move(item));
+        Node* node = new Node(item);
         node->next = prev->next;
         prev->next = node;
         ++length_;
     }
 
-    LinkedList<T>* Concat(LinkedList<T>* other) const {
+    void RemoveFirst() {
+        if (!head_) throw IndexOutOfRange("LinkedList::RemoveFirst: list is empty");
+        Node* toDelete = head_;
+        head_ = head_->next;
+        if (!head_) tail_ = nullptr;
+        delete toDelete;
+        --length_;
+    }
+
+    void RemoveLast() {
+        if (!tail_) throw IndexOutOfRange("LinkedList::RemoveLast: list is empty");
+        if (head_ == tail_) {
+            delete head_;
+            head_ = tail_ = nullptr;
+            --length_;
+            return;
+        }
+        Node* prev = head_;
+        while (prev->next != tail_) prev = prev->next;
+        delete tail_;
+        tail_       = prev;
+        tail_->next = nullptr;
+        --length_;
+    }
+
+    void RemoveAt(int index) {
+        if (index < 0 || index >= length_)
+            throw IndexOutOfRange(index, length_ - 1);
+        if (index == 0)            { RemoveFirst(); return; }
+        if (index == length_ - 1)  { RemoveLast();  return; }
+        Node* prev = head_;
+        for (int i = 0; i < index - 1; ++i) prev = prev->next;
+        Node* toDelete = prev->next;
+        prev->next     = toDelete->next;
+        delete toDelete;
+        --length_;
+    }
+
+    LinkedList<T>* Concat(const LinkedList<T>* other) const {
         auto* result = new LinkedList<T>(*this);
         for (Node* cur = other->head_; cur; cur = cur->next)
             result->Append(cur->data);
@@ -141,15 +179,4 @@ public:
     };
 
     IEnumerator<T>* GetEnumerator() const override { return new Enumerator(this); }
-
-    // range-based for
-    struct Iterator {
-        Node* node;
-        explicit Iterator(Node* n) : node(n) {}
-        T&        operator*()  { return node->data; }
-        Iterator& operator++() { node = node->next; return *this; }
-        bool      operator!=(const Iterator& o) const { return node != o.node; }
-    };
-    Iterator begin() { return Iterator(head_); }
-    Iterator end()   { return Iterator(nullptr); }
 };

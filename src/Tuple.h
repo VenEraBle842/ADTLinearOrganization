@@ -7,7 +7,7 @@ struct Tuple {
     T2 second;
 
     Tuple() = default;
-    Tuple(T1 f, T2 s) : first(std::move(f)), second(std::move(s)) {}
+    Tuple(const T1& f, const T2& s) : first(f), second(s) {}
 
     bool operator==(const Tuple& o) const {
         return first == o.first && second == o.second;

@@ -130,3 +130,68 @@ TEST(Sequence, TrySemantic) {
     EXPECT_TRUE(seq.TryGetFirst().HasValue());
     EXPECT_EQ(seq.TryGet(0).GetValue(), 7);
 }
+
+// RemoveAt / RemoveFirst / RemoveLast
+TEST(MutableArraySeq, RemoveAt) {
+    int arr[] = {1, 2, 3};
+    MutableArraySequence<int> seq(arr, 3);
+    seq.RemoveAt(1);
+    EXPECT_EQ(seq.GetLength(), 2);
+    EXPECT_EQ(seq.Get(1),      3);
+}
+
+TEST(MutableArraySeq, RemoveFirst) {
+    int arr[] = {1, 2, 3};
+    MutableArraySequence<int> seq(arr, 3);
+    seq.RemoveFirst();
+    EXPECT_EQ(seq.GetFirst(),  2);
+    EXPECT_EQ(seq.GetLength(), 2);
+}
+
+TEST(MutableArraySeq, RemoveLast) {
+    int arr[] = {1, 2, 3};
+    MutableArraySequence<int> seq(arr, 3);
+    seq.RemoveLast();
+    EXPECT_EQ(seq.GetLast(),   2);
+    EXPECT_EQ(seq.GetLength(), 2);
+}
+
+TEST(ImmutableArraySeq, RemoveAtDoesNotMutate) {
+    int arr[] = {1, 2, 3};
+    ImmutableArraySequence<int> seq(arr, 3);
+    auto* newSeq = seq.RemoveAt(1);
+    EXPECT_EQ(seq.GetLength(),    3);  // оригинал не изменился
+    EXPECT_EQ(newSeq->GetLength(), 2);
+    EXPECT_EQ(newSeq->Get(1),      3);
+    delete newSeq;
+}
+
+TEST(MutableListSeq, RemoveAt) {
+    int arr[] = {5, 10, 15};
+    MutableListSequence<int> seq(arr, 3);
+    seq.RemoveAt(1);
+    EXPECT_EQ(seq.GetLength(), 2);
+    EXPECT_EQ(seq.Get(1),      15);
+}
+
+TEST(ImmutableListSeq, RemoveAtDoesNotMutate) {
+    int arr[] = {1, 2, 3};
+    ImmutableListSequence<int> seq(arr, 3);
+    auto* newSeq = seq.RemoveAt(1);
+    EXPECT_EQ(seq.GetLength(),    3);  // оригинал не изменился
+    EXPECT_EQ(newSeq->GetLength(), 2);
+    delete newSeq;
+}
+
+TEST(Sequence, RemoveOutOfRange) {
+    int arr[] = {1, 2, 3};
+    MutableArraySequence<int> seq(arr, 3);
+    EXPECT_THROW(seq.RemoveAt(-1), IndexOutOfRange);
+    EXPECT_THROW(seq.RemoveAt(3),  IndexOutOfRange);
+}
+
+TEST(Sequence, RemoveFromEmpty) {
+    MutableArraySequence<int> seq;
+    EXPECT_THROW(seq.RemoveFirst(), IndexOutOfRange);
+    EXPECT_THROW(seq.RemoveLast(),  IndexOutOfRange);
+}

@@ -13,20 +13,23 @@ template <class T>
 class Sequence : public IEnumerable<T> {
 public:
     virtual ~Sequence() = default;
-
     // чтение
-    virtual T   GetFirst()  const = 0;
-    virtual T   GetLast()   const = 0;
-    virtual T   Get(int index) const = 0;
-    virtual int GetLength() const = 0;
+    virtual const T&   GetFirst()     const = 0;
+    virtual const T&   GetLast()      const = 0;
+    virtual const T&   Get(int index) const = 0;
+    virtual int        GetLength()    const = 0;
 
     virtual Sequence<T>* GetSubsequence(int startIndex, int endIndex) const = 0;
 
     // мутация
-    virtual Sequence<T>* Append(T item)              = 0;
-    virtual Sequence<T>* Prepend(T item)             = 0;
-    virtual Sequence<T>* InsertAt(T item, int index) = 0;
-    virtual Sequence<T>* Concat(Sequence<T>* other)  = 0;
+    virtual Sequence<T>* Append(const T& item)              = 0;
+    virtual Sequence<T>* Prepend(const T& item)             = 0;
+    virtual Sequence<T>* InsertAt(const T& item, int index) = 0;
+    virtual Sequence<T>* RemoveFirst()                      = 0;
+    virtual Sequence<T>* RemoveLast()                       = 0;
+    virtual Sequence<T>* RemoveAt(int index)                = 0;
+
+    virtual Sequence<T>* Concat(const Sequence<T>* other);
 
     // паттерн mutable/immutable
     virtual Sequence<T>* Clone()       const = 0;
@@ -98,9 +101,17 @@ std::ostream& operator<<(std::ostream& os, const Sequence<T>& seq) {
 // Нужна для корректной работы с Immutable-последовательностями в цикле:
 // каждый Append у Immutable создает новый объект. Старый при этом нужно удалить.
 template <class T>
-void appendTracked(Sequence<T>*& seq, T item) {
+void appendTracked(Sequence<T>*& seq, const T& item) {
     Sequence<T>* next = seq->Append(item);
     if (next != seq) { delete seq; seq = next; }
+}
+
+template <class T>
+Sequence<T>* Sequence<T>::Concat(const Sequence<T>* other) {
+    Sequence<T>* inst = this->Instance();
+    for (const T& item : *other)
+        appendTracked(inst, item);
+    return inst;
 }
 
 // Разрыв цикла: включаем ArraySequence ПОСЛЕ определения Sequence
@@ -185,7 +196,7 @@ Sequence<Sequence<T>*>* Sequence<T>::Split(bool (*isSeparator)(T)) const {
 // Zip / Unzip
 
 template <class T1, class T2>
-Sequence<Tuple<T1,T2>>* Zip(Sequence<T1>* a, Sequence<T2>* b) {
+Sequence<Tuple<T1,T2>>* Zip(const Sequence<T1>* a, const Sequence<T2>* b) {
     int len = (a->GetLength() < b->GetLength()) ? a->GetLength() : b->GetLength();
     auto* result = new MutableArraySequence<Tuple<T1,T2>>();
     for (int i = 0; i < len; ++i)
@@ -194,7 +205,7 @@ Sequence<Tuple<T1,T2>>* Zip(Sequence<T1>* a, Sequence<T2>* b) {
 }
 
 template <class T1, class T2>
-Tuple<Sequence<T1>*, Sequence<T2>*> Unzip(Sequence<Tuple<T1,T2>>* seq) {
+Tuple<Sequence<T1>*, Sequence<T2>*> Unzip(const Sequence<Tuple<T1,T2>>* seq) {
     auto* first  = new MutableArraySequence<T1>();
     auto* second = new MutableArraySequence<T2>();
     for (int i = 0; i < seq->GetLength(); ++i) {
