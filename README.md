@@ -5,7 +5,16 @@
 ### DynamicArray\<T\>
 Реализует **динамический массив** — структуру данных с непрерывным размещением элементов в памяти. Элемент с индексом `i` находится по адресу `base_ptr + i * sizeof(T)`, что дает доступ за O(1).
 
-Операция `Resize` выполняет **реаллокацию**: выделяет новый блок размером `newSize`, копирует `min(oldSize, newSize)` элементов, освобождает старый блок. Сложность — O(n). Следствие: вставка в произвольную позицию требует сдвига всех последующих элементов — тоже O(n).
+`Resize` отвечает только за **рост** буфера: при `newSize > capacity_` выделяется новый блок,
+данные копируются, старый блок освобождается. Сложность — O(n).
+
+Стратегия роста — **удвоение** (`capacity_ *= 2`), что дает амортизированную стоимость
+вставки O(1). Начальная емкость — `INITIAL_CAPACITY = 8`.
+
+Сжатие буфера — явное, через `ShrinkToFit()`. Метод уменьшает `capacity_` вдвое до тех пор,
+пока выполняется `capacity_ / 2 >= size_` и `capacity_ / 2 >= INITIAL_CAPACITY`. Вызывается
+вручную после массового удаления элементов. Без явного вызова лишняя память не освобождается.
+
 
 Класс реализует **правило трех (Rule of Three)**: определены копирующий конструктор, оператор присваивания и деструктор. Это гарантирует корректную семантику владения: каждый экземпляр владеет собственным блоком памяти, копирование всегда глубокое (deep copy).
 
@@ -76,7 +85,8 @@ virtual Sequence<T>* Instance() = 0;
 while (enumerator->MoveNext())
     process(enumerator->Current());
 ```
-`begin()`/`end()` — дополнительный слой, адаптирующий этот интерфейс к **range-based for** из C++11. Для `DynamicArray` это просто сырые указатели, для `LinkedList` — обертка над указателем на узел.
+`begin()`/`end()` — дополнительный слой, адаптирующий этот интерфейс к **range-based for** из C++11. Для `DynamicArray` и `LinkedList` — обертка `EnumeratorAdapter` над соответствующим
+вложенным классом `Enumerator`, реализующим `IEnumerator<T>`.
 
 ### BitSequence
 Наследует `MutableArraySequence<Bit>`, добавляя **побитовые операции**. Тип `Bit` хранит `int`, гарантируя значение 0 или 1 через маску `v & 1` в конструкторе. Конструктор и оператор преобразования помечены `explicit` — запрет неявных преобразований между `int` и `Bit`.
@@ -111,9 +121,9 @@ classDiagram
 
     class Sequence~T~ {
         <<abstract>>
-        +GetFirst() T
-        +GetLast() T
-        +Get(int) T
+        +GetFirst() const T&
+        +GetLast() const T&
+        +Get(int) const T&
         +GetLength() int
         +Append(T) Sequence~T~*
         +Prepend(T) Sequence~T~*
@@ -135,19 +145,21 @@ classDiagram
     class DynamicArray~T~ {
         -data_ T*
         -size_ int
-        +Get(int) T
+        -capacity_ int
+        +Get(int) const T&
         +Set(int, T) void
         +GetSize() int
         +Resize(int) void
+        +ShrinkToFit() void
     }
 
     class LinkedList~T~ {
         -head_ Node*
         -tail_ Node*
         -length_ int
-        +GetFirst() T
-        +GetLast() T
-        +Get(int) T
+        +GetFirst() const T&
+        +GetLast() const T&
+        +Get(int) const T&
         +Append(T) void
         +Prepend(T) void
         +InsertAt(T, int) void
@@ -265,7 +277,7 @@ flowchart LR
     SRC -->|"Where(pred)"| WHR["Sequence~T~<br/>только элементы<br/>где pred=true"]
     SRC -->|"Reduce(f, init)"| RED["T2<br/>одно значение"]
     SRC -->|"Find(pred)"| FND["Option~T~<br/>Some или None"]
-    SRC -->|"FlatMap(f)"| FMAP["Sequence~T~<br/>вложенные списки<br/>развёрнуты"]
+    SRC -->|"FlatMap(f)"| FMAP["Sequence~T~<br/>вложенные списки<br/>развернуты"]
     SRC -->|"Split(pred)"| SPL["Sequence~Sequence~T~~<br/>несколько частей"]
     SRC -->|"Slice(i, n, s)"| SLC["Sequence~T~<br/>вырезано n<br/>вставлено s"]
 
@@ -296,7 +308,7 @@ flowchart TD
 
     PARSE -->|"show / get / subseq"| RD_OP["Чтение<br/>current не меняется"]
     PARSE -->|"append / prepend<br/>insert / concat"| MUT_OP[Мутирующая операция]
-    PARSE -->|"map / where / reduce<br/>zip / split / slice"| FN_OP["Функциональная операция<br/>создаёт новый объект"]
+    PARSE -->|"map / where / reduce<br/>zip / split / slice"| FN_OP["Функциональная операция<br/>создает новый объект"]
     PARSE -->|"median / perms / reflect"| CALC[map-reduce вычисление]
     PARSE -->|bit| BIT["BitSequence демо<br/>AND OR XOR NOT"]
     PARSE -->|help| HELP[Вывод справки]
